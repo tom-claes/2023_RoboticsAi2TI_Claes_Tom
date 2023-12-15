@@ -112,7 +112,7 @@ class Move(Node):
         
 
 
-            maximum_afwijking = 0.00000001  # Maximum verschil tussen zijde links en rechts
+            maximum_afwijking = 0.0000000001  # Maximum verschil tussen zijde links en rechts
             motor_draai = 0.012
 
             # als zijde links en rechts even groot zijn dan staat de robot parallel met de straat en rijdt hij recht vooruit
@@ -151,3 +151,4 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+
