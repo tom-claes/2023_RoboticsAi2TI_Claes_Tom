@@ -43,6 +43,70 @@ class Move(Node):
 
         self.start_time = time.time()
 
+
+        # maakt array van gevalideerde punten tussen begin en eindgraden
+    def get_valid_indices(self, msg, border1 , border2):
+
+        # initieert een lege array waar de waarden v.d. lidar data in komen
+        indices = []
+
+        # zet de graden om in begin en eindpunt (lidar punten)
+        start_index = self.degrees(msg, border2)
+        end_index = self.degrees(msg, border1)
+
+        # itereert over elk punt in de range
+        for i in range(start_index, end_index):
+            # waarde (afstand) van lidar punt
+            value = msg.ranges[i]
+            # checkt of de waarde tussen 0 & oneindig is en kijkt ook of het niet nan is
+            if 0 < value < float('inf') and not math.isnan(value):
+                # als de waarde voldoet aan de criteria, voeg waarde toe aan verzameling punten
+                indices.append(value)
+
+        # returned array van gevalideerde lidar punten tussen een begin- en eindpunt 
+        return indices
+
+    # returned de kleinste waarde uit een range lidar data
+    def min_lidar_value(self, msg, start_degree, end_degree):
+        # roept functie get_valid_indices aan met begin en eindgraden om de array met lidar punten terug te krijgen
+        indices = self.get_valid_indices(msg, start_degree, end_degree)
+
+        # als er indices zijn, return het laagste punt
+        if indices:
+            return min(indices)
+        else:
+            return None
+    
+    # Geeft lidar punten die overeenkomen met een aantal graden
+    def degrees(self, msg, degrees):
+        total_ranges = int(len(msg.ranges))
+        # lidar graden zijn in tegenwijzerzin (45° => 315°)
+        value = int(((360 - degrees) / 360) * total_ranges)
+        return value
+
+
+    # Functie die de ranges instelt van de LiDar detector
+    def laser_callback(self,msg): 
+
+        # als de directie nog niet gezet is willen we data van beide kanten, en als richting rechts is willen we enkel nog data van rechts
+        if not self.direction_set or self.direction == "right":
+            # haalt de min afstand van links en rechts op
+            self.laser_right = self.min_lidar_value(msg, 85, 95)
+            
+            # haalt de min afstand van 45° & 135° op
+            self.laser_45 = self.min_lidar_value(msg, 40, 50)
+            self.laser_135 = self.min_lidar_value(msg, 130, 140)
+
+        # als de directie nog niet gezet is willen we data van beide kanten, en als richting links is willen we enkel nog data van links
+        if not self.direction_set or self.direction == "left":
+            # haalt de min afstand van links en rechts op
+            self.laser_left = self.min_lidar_value(msg, 265, 275)
+
+            # haalt de min afstand van 225° & 315° op
+            self.laser_225 = self.min_lidar_value(msg, 220, 230)
+            self.laser_315 = self.min_lidar_value(msg, 310, 320)
+
+
 # Functie die de ranges instelt van de LiDar detector
     def laser_callback(self,msg): 
         
@@ -72,15 +136,7 @@ class Move(Node):
         self.zijde_links = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_left, 2))
         self.zijde_rechts = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_right, 2))
     
-    
-    # Geeft lidar punten die overeenkomen met een aantal graden
-    def degrees(self,msg,degrees):
-         
-        total_ranges = int(len(msg.ranges))
 
-        value = int((total_ranges / 360) * (360 - degrees))
-        
-        return value
 # Functie die bepaalt hoe de robot gaat bewegen
     def motion(self):
         #if self.start_time > 40:
