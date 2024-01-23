@@ -24,12 +24,11 @@ class Turn(Node):
         # define the timer period for 0.5 seconds
         self.timer_period = 0.1
         # define the variable to save the received info
-        self.laser_forward = 0
 
         self.total_ranges = 0
 
-        self.laser_right45 = 0
-        self.laser_right135 = 0
+        self.laser_frontLeft = 0
+        self.laser_frontRight = 0
 
         self.laser_left = 0
         self.laser_right = 0
@@ -37,9 +36,10 @@ class Turn(Node):
         self.zijde_links = 0
         self.zijde_rechts = 0
 
-        # create a Twist message
-
+        # holds the direction to turn (left / right), can only be set once
         self.direction = 0
+
+        # create a Twist message
 
         self.timer = self.create_timer(self.timer_period, self.motion)
 
@@ -47,14 +47,19 @@ class Turn(Node):
 
 # Functie die de ranges instelt van de LiDar detector
     def laser_callback(self,msg): 
+        
+        # Save the frontal laser scan isourcnfo at 0° 
+        self.laser_forward = msg.ranges[0] 
 
-        # houdt afstand van 45 & 135 graden bij, zodat robot kan zien of hij in het midden van pad opening rechts staat
-        right45_indices = [value for value in msg.ranges[self.degrees(msg, 1):self.degrees(msg, 40)] if 0 < value < float('inf') and not math.isnan(value)]
-        right135_indices = [value for value in msg.ranges[self.degrees(msg, 320):self.degrees(msg, -1)] if 0 < value < float('inf') and not math.isnan(value)]
+        self.get_logger().info('Right: "%s"' % str(msg.ranges[self.degrees(msg, 45)]))
 
-        if right45_indices and right135_indices:
-            self.laser_right45 = min(right45_indices)
-            self.laser_right135 = min(right135_indices)
+
+        frontLeft_indices = [value for value in msg.ranges[self.degrees(msg, 1):self.degrees(msg, 40)] if 0 < value < float('inf') and not math.isnan(value)]
+        frontRight_indices = [value for value in msg.ranges[self.degrees(msg, 320):self.degrees(msg, -1)] if 0 < value < float('inf') and not math.isnan(value)]
+
+        if frontLeft_indices and frontRight_indices:
+            self.laser_frontLeft = min(frontLeft_indices)
+            self.laser_frontRight = min(frontRight_indices)
 
 
         left_indices = [value for value in msg.ranges[self.degrees(msg, 255):self.degrees(msg, 285)] if 0 < value < float('inf') and not math.isnan(value)]

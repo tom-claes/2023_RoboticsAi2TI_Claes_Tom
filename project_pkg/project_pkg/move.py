@@ -22,7 +22,7 @@ class Move(Node):
         # create subscriber
         self.subscriber = self.create_subscription(LaserScan, '/scan', self.laser_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
         # define the timer period for 0.5 seconds
-        self.timer_period = 0.5
+        self.timer_period = 0.1
         # define the variable to save the received info
         self.laser_forward = 0
 
@@ -39,8 +39,6 @@ class Move(Node):
 
         # create a Twist message
 
-        self.direction = 0
-
         self.timer = self.create_timer(self.timer_period, self.motion)
 
         self.start_time = time.time()
@@ -50,35 +48,39 @@ class Move(Node):
         
         # Save the frontal laser scan isourcnfo at 0° 
         self.laser_forward = msg.ranges[0] 
-        self.total_ranges = int(len(msg.ranges))
+
+        self.get_logger().info('Right: "%s"' % str(msg.ranges[self.degrees(msg, 45)]))
+
+        frontLeft_indices = [value for value in msg.ranges[self.degrees(msg, 1):self.degrees(msg, 40)] if 0 < value < float('inf') and not math.isnan(value)]
+        frontRight_indices = [value for value in msg.ranges[self.degrees(msg, 320):self.degrees(msg, -1)] if 0 < value < float('inf') and not math.isnan(value)]
+        
+
+        if frontLeft_indices and frontRight_indices:
+            self.laser_frontLeft = min(frontLeft_indices)
+            self.laser_frontRight = min(frontRight_indices)
 
 
-        self.laser_frontLeft = min(msg.ranges[1:25]) 
-        self.laser_frontRight = min(msg.ranges[len(msg.ranges)-25:len(msg.ranges)-1]) 
-
-        # berekent 25% (+-90 graden) en 75% (+-270 graden) op basis van het totaal aantal gescande punten
-        right_range = int(self.total_ranges * 0.25)
-        left_range = int(self.total_ranges * 0.75)
-
-        right_range_small = int(right_range - self.total_ranges * 0.02)
-        right_range_big = int(right_range + self.total_ranges * 0.02)
-
-        left_range_big = int(left_range + self.total_ranges * 0.02)
-        left_range_small = int(left_range - self.total_ranges * 0.02)
-
-                              
-        #Stelt de range van links en rechts in, het neemt 5% boven en onder de linkse en rechtse waarde voor een totaal van 10%
-        left_indices = [value for value in msg.ranges[left_range_small:left_range_big] if 0 < value < float('inf') and not math.isnan(value)]
-        right_indices = [value for value in msg.ranges[right_range_small:right_range_big] if 0 < value < float('inf') and not math.isnan(value)]
+        left_indices = [value for value in msg.ranges[self.degrees(msg, 255):self.degrees(msg, 285)] if 0 < value < float('inf') and not math.isnan(value)]
+        right_indices = [value for value in msg.ranges[self.degrees(msg, 75):self.degrees(msg, 105)] if 0 < value < float('inf') and not math.isnan(value)]
 
         if left_indices and right_indices:
-            self.laser_left = min(left_indices)
-            self.laser_right = min(right_indices)
+           self.laser_left = min(left_indices)
+           self.laser_right = min(right_indices)
+           
         
         # Berekent de lange zijde tussen forward en links/rechts m.b.v. de stelling van pythagoras
         self.zijde_links = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_left, 2))
         self.zijde_rechts = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_right, 2))
+    
+    
+    # Geeft lidar punten die overeenkomen met een aantal graden
+    def degrees(self,msg,degrees):
+         
+        total_ranges = int(len(msg.ranges))
+
+        value = int((total_ranges / 360) * (360 - degrees))
         
+        return value
 # Functie die bepaalt hoe de robot gaat bewegen
     def motion(self):
         #if self.start_time > 40:
@@ -90,22 +92,17 @@ class Move(Node):
             
             self.get_logger().info('Forward: "%s"' % str(self.laser_forward))
             
-            #self.get_logger().info('Left-Forward: "%s"' % str(self.laser_frontLeft))
-            #self.get_logger().info('Right-Forward: "%s"' % str(self.laser_frontRight))
+            self.get_logger().info('Left-Forward: "%s"' % str(self.laser_frontLeft))
+            self.get_logger().info('Right-Forward: "%s"' % str(self.laser_frontRight))
             
-            #self.get_logger().info('Range left small: "%s"' % str(self.left_range_small))
-            #self.get_logger().info('Range left big: "%s"' % str(self.left_range_big))
-
-            #self.get_logger().info('Range right small: "%s"' % str(self.right_range_small))
-            #self.get_logger().info('Range right big: "%s"' % str(self.right_range_big))
         
             self.get_logger().info('LEFT: "%s"' % str(self.laser_left))
             self.get_logger().info('RIGHT: "%s"' % str(self.laser_right))
 
-            self.get_logger().info('SIDE LEFT: "%s"' % str(self.zijde_links))
-            self.get_logger().info('SIDE RIGHT: "%s"' % str(self.zijde_rechts))
+            #self.get_logger().info('SIDE LEFT: "%s"' % str(self.zijde_links))
+            #self.get_logger().info('SIDE RIGHT: "%s"' % str(self.zijde_rechts))
 
-            self.get_logger().info('')
+            #self.get_logger().info('')
 
         # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -118,13 +115,13 @@ class Move(Node):
             # als zijde links en rechts even groot zijn dan staat de robot parallel met de straat en rijdt hij recht vooruit
             if (self.zijde_rechts - self.zijde_links) > maximum_afwijking :
                 msg.linear.x = 0.05  # Forward linear velocity
-                msg.angular.z = motor_draai  # Adjust angular velocity for a right turn
+                msg.angular.z = -(motor_draai)  # Adjust angular velocity for a right turn
                 self.get_logger().info('=>')
 
             # If the left wall is too far, adjust to the left
             elif (self.zijde_links - self.zijde_rechts) > maximum_afwijking :
                 msg.linear.x = 0.05  # Forward linear velocity
-                msg.angular.z = -(motor_draai)  # Adjust angular velocity for a left turn
+                msg.angular.z = motor_draai  # Adjust angular velocity for a left turn
                 self.get_logger().info('<=')
 
             # If the distance is within the desired range, move forward
