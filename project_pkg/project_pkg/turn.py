@@ -22,14 +22,14 @@ class Turn(Node):
         # create subscriber
         self.subscriber = self.create_subscription(LaserScan, '/scan', self.laser_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
         # define the timer period for 0.5 seconds
-        self.timer_period = 0.1
+        self.timer_period = 1
         # define the variable to save the received info
-        self.laser_forward = 0
-
         self.total_ranges = 0
 
-        self.laser_right45 = 0
-        self.laser_right135 = 0
+        self.laser_forward = 0
+
+        self.laser_45 = 0
+        self.laser_135 = 0
 
         self.laser_left = 0
         self.laser_right = 0
@@ -45,38 +45,59 @@ class Turn(Node):
 
         self.start_time = time.time()
 
+    # maakt array van gevalideerde punten tussen begin en eindgraden
+    def get_valid_indices(self, msg, border1 , border2):
+
+        # initieert een lege array waar de waarden v.d. lidar data in komen
+        indices = []
+
+        # zet de graden om in begin en eindpunt (lidar punten)
+        start_index = self.degrees(msg, border2)
+        end_index = self.degrees(msg, border1)
+
+        # itereert over elk punt in de range
+        for i in range(start_index, end_index):
+            # waarde (afstand) van lidar punt
+            value = msg.ranges[i]
+            # checkt of de waarde tussen 0 & oneindig is en kijkt ook of het niet nan is
+            if 0 < value < float('inf') and not math.isnan(value):
+                # als de waarde voldoet aan de criteria, voeg waarde toe aan verzameling punten
+                indices.append(value)
+
+        # returned array van gevalideerde lidar punten tussen een begin- en eindpunt 
+        return indices
+
+    #
+    def min_lidar_value(self, msg, start_degree, end_degree):
+        # roept functie get_valid_indices aan met begin en eindgraden om de array met lidar punten terug te krijgen
+        indices = self.get_valid_indices(msg, start_degree, end_degree)
+
+        # als er indices zijn, return het laagste punt
+        if indices:
+            return min(indices)
+        else:
+            return None
+    
+    # Geeft lidar punten die overeenkomen met een aantal graden
+    def degrees(self, msg, degrees):
+        total_ranges = int(len(msg.ranges))
+        # lidar graden zijn in tegenwijzerzin (45° => 315°)
+        value = int(((360 - degrees) / 360) * total_ranges)
+        return value
+
+
 # Functie die de ranges instelt van de LiDar detector
     def laser_callback(self,msg): 
 
-        # houdt afstand van 45 & 135 graden bij, zodat robot kan zien of hij in het midden van pad opening rechts staat
-        right45_indices = [value for value in msg.ranges[self.degrees(msg, 1):self.degrees(msg, 40)] if 0 < value < float('inf') and not math.isnan(value)]
-        right135_indices = [value for value in msg.ranges[self.degrees(msg, 320):self.degrees(msg, -1)] if 0 < value < float('inf') and not math.isnan(value)]
-
-        if right45_indices and right135_indices:
-            self.laser_right45 = min(right45_indices)
-            self.laser_right135 = min(right135_indices)
-
-
-        left_indices = [value for value in msg.ranges[self.degrees(msg, 255):self.degrees(msg, 285)] if 0 < value < float('inf') and not math.isnan(value)]
-        right_indices = [value for value in msg.ranges[self.degrees(msg, 75):self.degrees(msg, 105)] if 0 < value < float('inf') and not math.isnan(value)]
-
-        if left_indices and right_indices:
-           self.laser_left = min(left_indices)
-           self.laser_right = min(right_indices)
+        # haalt de min afstand van links en rechts op
+        self.laser_left = self.min_lidar_value(msg, 265, 275)
+        self.laser_right = self.min_lidar_value(msg, 85, 95)
         
-        # Berekent de lange zijde tussen forward en links/rechts m.b.v. de stelling van pythagoras
-        self.zijde_links = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_left, 2))
-        self.zijde_rechts = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_right, 2))
-    
-    
-    # Geeft lidar punten die overeenkomen met een aantal graden
-    def degrees(self,msg,degrees):
-         
-        total_ranges = int(len(msg.ranges))
 
-        value = int((total_ranges / 360) * (360 - degrees))
-        
-        return value
+        # haalt de min afstand van 45 en 135 graden op
+        self.laser_45 = self.min_lidar_value(msg, 40, 50)
+        self.laser_135 = self.min_lidar_value(msg, 130, 140)
+
         
 # Functie die bepaalt hoe de robot gaat bewegen
     def motion(self):
@@ -85,26 +106,12 @@ class Turn(Node):
             msg = Twist()
 
             # print de data
-            #self.get_logger().info('Total ranges: "%s"' % str(self.total_ranges))
             
-            #self.get_logger().info('Forward: "%s"' % str(self.laser_forward))
+            self.get_logger().info('Left: "%s"' % str(self.laser_left))
+            self.get_logger().info('Right: "%s"' % str(self.laser_right))
             
-            #self.get_logger().info('Left: "%s"' % str(self.left_range))
-            #self.get_logger().info('Right: "%s"' % str(self.right_range))
-            
-            #self.get_logger().info('Range left small: "%s"' % str(self.left_range_small))
-            #self.get_logger().info('Range left big: "%s"' % str(self.left_range_big))
-
-            #self.get_logger().info('Range right small: "%s"' % str(self.right_range_small))
-            #self.get_logger().info('Range right big: "%s"' % str(self.right_range_big))
-        
-            #self.get_logger().info('LEFT: "%s"' % str(self.laser_left))
-            #self.get_logger().info('RIGHT: "%s"' % str(self.laser_right))
-
-            #self.get_logger().info('SIDE LEFT: "%s"' % str(self.zijde_links))
-            #self.get_logger().info('SIDE RIGHT: "%s"' % str(self.zijde_rechts))
-
-            #self.get_logger().info('')
+            self.get_logger().info('45: "%s"' % str(self.laser_45))
+            self.get_logger().info('135: "%s"' % str(self.laser_135))
 
         # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
