@@ -21,8 +21,10 @@ class Move(Node):
         self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
         # create subscriber
         self.subscriber = self.create_subscription(LaserScan, '/scan', self.laser_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
-        # define the timer period for 0.5 seconds
-        self.timer_period = 0.1
+        
+        # timer period van 0.005 seconden, omdat de afwijkings margin zo klein is, moet het programma snel refreshen zodat de turtlebot beweging zo snel mogelijk wordt aangepast en zo recht mogelijk rijdt
+        self.timer_period = 0.005
+        
         # define the variable to save the received info
         self.laser_forward = 0
 
@@ -34,13 +36,13 @@ class Move(Node):
         self.laser_left = 0
         self.laser_right = 0
 
-        self.zijde_links = 0
-        self.zijde_rechts = 0
+        self.diag_left = 0
+        self.diag_right = 0
 
         # create a Twist message
+        self.timer = self.create_timer(self.timer_period, self.move)
 
-        self.timer = self.create_timer(self.timer_period, self.motion)
-
+        # maakt timer functie zodat eerste x aantal seconden de links/rechts aanpassingen gebeuren zonder dat de robot afslaat naar rechts
         self.start_time = time.time()
 
 
@@ -84,61 +86,54 @@ class Move(Node):
         value = int(((360 - degrees) / 360) * total_ranges)
         return value
 
-
-    # Functie die de ranges instelt van de LiDar detector
-    def laser_callback(self,msg): 
-
-        # als de directie nog niet gezet is willen we data van beide kanten, en als richting rechts is willen we enkel nog data van rechts
-        if not self.direction_set or self.direction == "right":
-            # haalt de min afstand van links en rechts op
-            self.laser_right = self.min_lidar_value(msg, 85, 95)
-            
-            # haalt de min afstand van 45° & 135° op
-            self.laser_45 = self.min_lidar_value(msg, 40, 50)
-            self.laser_135 = self.min_lidar_value(msg, 130, 140)
-
-        # als de directie nog niet gezet is willen we data van beide kanten, en als richting links is willen we enkel nog data van links
-        if not self.direction_set or self.direction == "left":
-            # haalt de min afstand van links en rechts op
-            self.laser_left = self.min_lidar_value(msg, 265, 275)
-
-            # haalt de min afstand van 225° & 315° op
-            self.laser_225 = self.min_lidar_value(msg, 220, 230)
-            self.laser_315 = self.min_lidar_value(msg, 310, 320)
-
-
 # Functie die de ranges instelt van de LiDar detector
-    def laser_callback(self,msg): 
-        
+#    def laser_callback(self,msg): 
+#        
         # Save the frontal laser scan isourcnfo at 0° 
-        self.laser_forward = msg.ranges[0] 
-
-        self.get_logger().info('Right: "%s"' % str(msg.ranges[self.degrees(msg, 45)]))
-
-        frontLeft_indices = [value for value in msg.ranges[self.degrees(msg, 1):self.degrees(msg, 40)] if 0 < value < float('inf') and not math.isnan(value)]
-        frontRight_indices = [value for value in msg.ranges[self.degrees(msg, 320):self.degrees(msg, -1)] if 0 < value < float('inf') and not math.isnan(value)]
+#        self.laser_forward = msg.ranges[0] 
+#
+#        self.get_logger().info('Right: "%s"' % str(msg.ranges[self.degrees(msg, 45)]))
+#
+#        frontLeft_indices = [value for value in msg.ranges[self.degrees(msg, 1):self.degrees(msg, 40)] if 0 < value < float('inf') and not math.isnan(value)]
+#        frontRight_indices = [value for value in msg.ranges[self.degrees(msg, 320):self.degrees(msg, -1)] if 0 < value < float('inf') and not math.isnan(value)]
         
 
-        if frontLeft_indices and frontRight_indices:
-            self.laser_frontLeft = min(frontLeft_indices)
-            self.laser_frontRight = min(frontRight_indices)
+#        if frontLeft_indices and frontRight_indices:
+#            self.laser_frontLeft = min(frontLeft_indices)
+#            self.laser_frontRight = min(frontRight_indices)
 
 
-        left_indices = [value for value in msg.ranges[self.degrees(msg, 255):self.degrees(msg, 285)] if 0 < value < float('inf') and not math.isnan(value)]
-        right_indices = [value for value in msg.ranges[self.degrees(msg, 75):self.degrees(msg, 105)] if 0 < value < float('inf') and not math.isnan(value)]
+#        left_indices = [value for value in msg.ranges[self.degrees(msg, 255):self.degrees(msg, 285)] if 0 < value < float('inf') and not math.isnan(value)]
+#        right_indices = [value for value in msg.ranges[self.degrees(msg, 75):self.degrees(msg, 105)] if 0 < value < float('inf') and not math.isnan(value)]
 
-        if left_indices and right_indices:
-           self.laser_left = min(left_indices)
-           self.laser_right = min(right_indices)
+#        if left_indices and right_indices:
+#           self.laser_left = min(left_indices)
+#           self.laser_right = min(right_indices)
            
         
         # Berekent de lange zijde tussen forward en links/rechts m.b.v. de stelling van pythagoras
-        self.zijde_links = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_left, 2))
-        self.zijde_rechts = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_right, 2))
+#        self.zijde_links = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_left, 2))
+#        self.zijde_rechts = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_right, 2))
+
+
+    # Functie die de ranges instelt van de LiDar detector
+    def laser_callback(self,msg): 
+       
+       self.laser_forward = msg.ranges[0]
+
+       self.laser_frontRight = self.min_lidar_value(msg, 1, 40)
+       self.laser_frontLeft = self.min_lidar_value(msg, 320, 359)
+
+       self.laser_right = self.min_lidar_value(msg, 85, 95)
+       self.laser_left = self.min_lidar_value(msg, 265, 275)
+
+       # Berekent de lange zijde tussen forward en links/rechts m.b.v. de stelling van pythagoras
+       self.diag_right = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_right, 2))
+       self.diag_left = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_left, 2))
     
 
 # Functie die bepaalt hoe de robot gaat bewegen
-    def motion(self):
+    def move(self):
         #if self.start_time > 40:
             # create a Twist message
             msg = Twist()
@@ -165,17 +160,17 @@ class Move(Node):
         
 
 
-            maximum_afwijking = 0.00000001  # Maximum verschil tussen zijde links en rechts
-            motor_draai = 0.012
+            maximum_afwijking = 0.0  # Maximum verschil tussen zijde links en rechts
+            motor_draai = 0.005
 
             # als zijde links en rechts even groot zijn dan staat de robot parallel met de straat en rijdt hij recht vooruit
-            if (self.zijde_rechts - self.zijde_links) > maximum_afwijking :
+            if (self.diag_right - self.diag_left) > maximum_afwijking :
                 msg.linear.x = 0.05  # Forward linear velocity
                 msg.angular.z = -(motor_draai)  # Adjust angular velocity for a right turn
                 self.get_logger().info('=>')
 
             # If the left wall is too far, adjust to the left
-            elif (self.zijde_links - self.zijde_rechts) > maximum_afwijking :
+            elif (self.diag_left - self.diag_right) > maximum_afwijking :
                 msg.linear.x = 0.05  # Forward linear velocity
                 msg.angular.z = motor_draai  # Adjust angular velocity for a left turn
                 self.get_logger().info('<=')

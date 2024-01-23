@@ -44,7 +44,7 @@ class Turn(Node):
         self.laser_border1 = 0
         self.laser_border2 = 0
 
-        self.timer = self.create_timer(self.timer_period, self.motion)
+        self.timer = self.create_timer(self.timer_period, self.turn)
 
         self.start_time = time.time()
 
@@ -129,7 +129,7 @@ class Turn(Node):
 
         
     # Functie die bepaalt hoe de robot gaat bewegen
-    def motion(self):
+    def turn(self):
         #if self.start_time > 40:
             # create a Twist message
             msg = Twist()

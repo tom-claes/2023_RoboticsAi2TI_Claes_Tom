@@ -14,12 +14,12 @@ class Start(Node):
         # create publisher
         self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
 
-        self.timer = self.create_timer(self.timer_period, self.motion)
+        self.timer = self.create_timer(self.timer_period, self.start)
 
         self.start_time = time.time()
         
 # Functie die bepaalt hoe de robot gaat bewegen
-    def motion(self):
+    def start(self):
         msg = Twist()
 
         if self.start_time <= 40:

@@ -25,30 +25,73 @@ class Avoid_obstacle(Node):
         self.timer_period = 0.5
         # define the variable to save the received info
         self.laser_front = 0
+        self.laser_frontLeft_barrier = 0
+        self.laser_frontRight_barrier = 0
 
         self.total_ranges = 0
 
         # create a Twist message
 
-        self.timer = self.create_timer(self.timer_period, self.motion)
+        self.timer = self.create_timer(self.timer_period, self.stop)
 
         self.start_time = time.time()
 
-# Functie die de ranges instelt van de LiDar detector
+    # maakt array van gevalideerde punten tussen begin en eindgraden
+    def get_valid_indices(self, msg, border1 , border2):
+
+        # initieert een lege array waar de waarden v.d. lidar data in komen
+        indices = []
+
+        # zet de graden om in begin en eindpunt (lidar punten)
+        start_index = self.degrees(msg, border2)
+        end_index = self.degrees(msg, border1)
+
+        # itereert over elk punt in de range
+        for i in range(start_index, end_index):
+            # waarde (afstand) van lidar punt
+            value = msg.ranges[i]
+            # checkt of de waarde tussen 0 & oneindig is en kijkt ook of het niet nan is
+            if 0 < value < float('inf') and not math.isnan(value):
+                # als de waarde voldoet aan de criteria, voeg waarde toe aan verzameling punten
+                indices.append(value)
+
+        # returned array van gevalideerde lidar punten tussen een begin- en eindpunt 
+        return indices
+
+    # returned de kleinste waarde uit een range lidar data
+    def min_lidar_value(self, msg, start_degree, end_degree):
+        # roept functie get_valid_indices aan met begin en eindgraden om de array met lidar punten terug te krijgen
+        indices = self.get_valid_indices(msg, start_degree, end_degree)
+
+        # als er indices zijn, return het laagste punt
+        if indices:
+            return min(indices)
+        else:
+            return None
+    
+    # Geeft lidar punten die overeenkomen met een aantal graden
+    def degrees(self, msg, degrees):
+        total_ranges = int(len(msg.ranges))
+        # lidar graden zijn in tegenwijzerzin (45° => 315°)
+        value = int(((360 - degrees) / 360) * total_ranges)
+        return value
+
+
+    # Functie die de ranges instelt van de LiDar detector
     def laser_callback(self,msg): 
-        
-        # Save the frontal laser scan isourcnfo at 0° 
-        self.total_ranges = int(len(msg.ranges))
 
-        frontLeft_barrier = int((self.total_ranges / 360) * 315)
-        frontRight_barrier = int((self.total_ranges / 360) * 45)
+        # haalt min afstand (muur) van op 65° langs links en recht op
+        self.laser_frontRight_barrier = self.min_lidar_value(msg, 60, 70)
+        self.laser_frontLeft_barrier = self.min_lidar_value(msg, 290, 300)
 
-        #if msg.ranges[frontLeft_barrier:frontRight_barrier]:
-        self.laser_front = min(msg.ranges[frontLeft_barrier:frontRight_barrier]) 
-        
+        # maakt der range voor de robot aan, als er iets in deze range komt stopt de robot
+        self.laser_front = self.min_lidar_value(msg, 290, 70)
+
+
+
         
 # Functie die bepaalt hoe de robot gaat bewegen
-    def motion(self):
+    def stop(self):
             # create a Twist message
             msg = Twist()
 
@@ -61,9 +104,17 @@ class Avoid_obstacle(Node):
         # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         
+            # welke kant is dichter bij de muur: links / rechts? 
+            # als links dichter bij de muur is gebruiken we de afstand tot de muur. Als er in de front range een obstakel bevindt dat zich dichter bevindt dan de muur dan stop de Turtlebot
+            if self.laser_frontRight_barrier > self.laser_frontLeft_barrier:
+                if self.laser_front < self.laser_frontLeft_barrier:
+                    # stop moving
 
-
-                    
+            # als rechts dichter bij de muur is gebruiken we de afstand tot de muur. Als er in de front range een obstakel bevindt dat zich dichter bevindt dan de muur dan stop de Turtlebot
+            elif self.laser_frontRight_barrier < self.laser_frontLeft_barrier:
+                if self.laser_front < self.laser_frontRight_barrier:
+                    # stop moving
+               
             self.publisher_.publish(msg)
         
 
