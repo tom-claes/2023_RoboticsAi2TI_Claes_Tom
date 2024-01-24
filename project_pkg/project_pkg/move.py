@@ -25,6 +25,8 @@ class Move(Node):
         
         # timer period van 0.025 seconden, omdat de afwijkings margin zo klein is, moet het programma snel refreshen zodat de turtlebot beweging zo snel mogelijk wordt aangepast en zo recht mogelijk rijdt
         self.timer_period = 0.025
+
+        self.turning = False
         
         # define the variable to save the received info
         self.laser_forward = 0
@@ -40,13 +42,18 @@ class Move(Node):
         self.diag_left = 0
         self.diag_right = 0
 
+        # de variabelen waarin de min afstand (lidar data waarde) binnen een range van 10° (5 boven en 5 onder ) wordt opgeslagen
+        self.laser_50 = 0
+        self.laser_140 = 0
+
         # create a Twist message
-        self.timer = self.create_timer(self.timer_period, self.move)
+        self.timer = self.create_timer(self.timer_period, self.coördinator)
 
         # maakt timer functie zodat eerste x aantal seconden de links/rechts aanpassingen gebeuren zonder dat de robot afslaat naar rechts
         self.start_time = time.time()
 
 
+    # degrees(), get_valid_indices() & min_lidar_value() werken samen om de min afstand, in een range van een bepaald aantal graden, terug te geven
     # maakt array van gevalideerde punten tussen begin en eindgraden
     def get_valid_indices(self, msg, border1 , border2):
 
@@ -62,9 +69,10 @@ class Move(Node):
             # waarde (afstand) van lidar punt
             value = msg.ranges[i]
             # checkt of de waarde tussen 0 & oneindig is en kijkt ook of het niet nan is
-            if 0 < value < float('inf') and not math.isnan(value):
-                # als de waarde voldoet aan de criteria, voeg waarde toe aan verzameling punten
-                indices.append(value)
+            if value is not None:
+                if 0 < value < float('inf') and not math.isnan(value):
+                    # als de waarde voldoet aan de criteria, voeg waarde toe aan verzameling punten
+                    indices.append(value)
 
         # returned array van gevalideerde lidar punten tussen een begin- en eindpunt 
         return indices
@@ -89,7 +97,7 @@ class Move(Node):
 
 
     # Functie die de ranges instelt van de LiDar detector
-    def laser_callback(self,msg): 
+    def laser_callback(self, msg): 
        
        self.laser_forward = msg.ranges[0]
 
@@ -98,42 +106,80 @@ class Move(Node):
 
        self.laser_right = self.min_lidar_value(msg, 85, 95)
        self.laser_left = self.min_lidar_value(msg, 265, 275)
+       
+       # haalt de min afstand van 50° & 140° op
+       self.laser_50 = self.min_lidar_value(msg, 45, 55)
+       self.laser_140 = self.min_lidar_value(msg, 135, 145)
 
        # Berekent de lange zijde tussen forward en links/rechts m.b.v. de stelling van pythagoras
        self.diag_right = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_right, 2))
        self.diag_left = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_left, 2))
     
+    # Functie die robot draait
+    def turn_motioning(self, msg, linear_velocity, angular_velocity, duration):
+        msg.linear.x = linear_velocity
+        msg.linear.y = 0.0
+        msg.angular.z = angular_velocity
 
-# Functie die bepaalt hoe de robot gaat bewegen
+        start_time = time.time()
+
+        while time.time() - start_time < duration:
+            self.publisher_.publish(msg)
+            time.sleep(0.01)  # sleep for 10ms
+
+        # Stop the robot
+        msg.linear.x = 0.0
+        msg.angular.z = 0.0
+        self.publisher_.publish(msg)
+    
+    
+    # Functie die bepaalt hoe de robot gaat draaien
+    def turn(self):
+        msg = Twist()
+        
+        if self.laser_right is not None and self.laser_right > 1 and abs(self.laser_50 - self.laser_140) < 0.012:
+            # zorgt dat Turtlebot 90° draait
+            self.turn_motioning(msg, 0.0, -0.1, 16.2)
+            # zorgt dat Turtlebot eers in nieuwe gang is voor move.py opnieuw gebruikt wordt
+            self.turn_motioning(msg, 0.05, 0.0, 11.0)
+            # zorgt dat if niet loopt
+            self.laser_right = 0
+    
+    # Functie die bepaalt hoe de robot gaat bewegen
     def move(self):
-        #if self.start_time > 40:
-            # create a Twist message
             msg = Twist()
-      
+        #if self.start_time > 40:
+            # create a Twist message      
             maximum_afwijking = 0  # Maximum verschil tussen zijde links en rechts
-            motor_draai = 0.018 # snelheid van draaien
+            motor_draai = 0.015 # snelheid van draaien
 
             # als zijde links en rechts even groot zijn dan staat de robot parallel met de straat en rijdt hij recht vooruit
             if (self.diag_right - self.diag_left) > maximum_afwijking :
                 msg.linear.x = 0.05  # Forward linear velocity
                 msg.angular.z = -(motor_draai)  # Adjust angular velocity for a right turn
-                self.get_logger().info('=>')
 
             # If the left wall is too far, adjust to the left
             elif (self.diag_left - self.diag_right) > maximum_afwijking :
                 msg.linear.x = 0.05  # Forward linear velocity
                 msg.angular.z = motor_draai  # Adjust angular velocity for a left turn
-                self.get_logger().info('<=')
 
             # If the distance is within the desired range, move forward
             else:
                 msg.linear.x = 0.05  # Forward linear velocity
                 msg.angular.z = 0.0  # No angular velocity for straight motion
-                self.get_logger().info('MOVING FORWARD')
        
                     
             self.publisher_.publish(msg)
-        
+
+    def coördinator(self):
+        if self.laser_right is not None and self.laser_right > 1 and abs(self.laser_50 - self.laser_140) < 0.012:
+            self.get_logger().info('Turning')
+            self.turning = True
+            self.turn()
+            self.turning = False
+        elif self.turning == False:
+            self.move()
+
 
 def main(args=None):
     # initialize the ROS communication

@@ -26,7 +26,6 @@ class Turn(Node):
         # define the variable to save the received info
         self.total_ranges = 0
 
-        self.laser_forward = 0
 
         # de variabelen waarin de min afstand (lidar data waarde) binnen een range van 10° (5 boven en 5 onder ) wordt opgeslagen
         self.laser_50 = 0
@@ -75,7 +74,7 @@ class Turn(Node):
         if indices:
             return min(indices)
         else:
-            return None
+            return 0
     
     # Geeft lidar punten die overeenkomen met een aantal graden
     def degrees(self, msg, degrees):
@@ -122,8 +121,6 @@ class Turn(Node):
             self.move(msg, 0.05, 0.0, 11.0)
             # zorgt dat if niet loopt
             self.laser_right = 0
-
-        self.publisher_.publish(msg)
         
 
 def main(args=None):
