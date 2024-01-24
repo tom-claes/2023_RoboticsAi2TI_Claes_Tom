@@ -15,6 +15,7 @@ class Move(Node):
 
 # Constructor
     def __init__(self):
+
         # call class constructor
         super().__init__('move')
         # create publisher
@@ -22,8 +23,8 @@ class Move(Node):
         # create subscriber
         self.subscriber = self.create_subscription(LaserScan, '/scan', self.laser_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
         
-        # timer period van 0.005 seconden, omdat de afwijkings margin zo klein is, moet het programma snel refreshen zodat de turtlebot beweging zo snel mogelijk wordt aangepast en zo recht mogelijk rijdt
-        self.timer_period = 0.005
+        # timer period van 0.025 seconden, omdat de afwijkings margin zo klein is, moet het programma snel refreshen zodat de turtlebot beweging zo snel mogelijk wordt aangepast en zo recht mogelijk rijdt
+        self.timer_period = 0.025
         
         # define the variable to save the received info
         self.laser_forward = 0
@@ -46,7 +47,7 @@ class Move(Node):
         self.start_time = time.time()
 
 
-        # maakt array van gevalideerde punten tussen begin en eindgraden
+    # maakt array van gevalideerde punten tussen begin en eindgraden
     def get_valid_indices(self, msg, border1 , border2):
 
         # initieert een lege array waar de waarden v.d. lidar data in komen
@@ -77,7 +78,7 @@ class Move(Node):
         if indices:
             return min(indices)
         else:
-            return None
+            return 0
     
     # Geeft lidar punten die overeenkomen met een aantal graden
     def degrees(self, msg, degrees):
@@ -139,16 +140,16 @@ class Move(Node):
             msg = Twist()
 
             # print de data
-            self.get_logger().info('Total ranges: "%s"' % str(self.total_ranges))
+            #self.get_logger().info('Total ranges: "%s"' % str(self.total_ranges))
             
-            self.get_logger().info('Forward: "%s"' % str(self.laser_forward))
+            #self.get_logger().info('Forward: "%s"' % str(self.laser_forward))
             
-            self.get_logger().info('Left-Forward: "%s"' % str(self.laser_frontLeft))
-            self.get_logger().info('Right-Forward: "%s"' % str(self.laser_frontRight))
+            #self.get_logger().info('Left-Forward: "%s"' % str(self.laser_frontLeft))
+            #self.get_logger().info('Right-Forward: "%s"' % str(self.laser_frontRight))
             
         
-            self.get_logger().info('LEFT: "%s"' % str(self.laser_left))
-            self.get_logger().info('RIGHT: "%s"' % str(self.laser_right))
+            #self.get_logger().info('LEFT: "%s"' % str(self.laser_left))
+            #self.get_logger().info('RIGHT: "%s"' % str(self.laser_right))
 
             #self.get_logger().info('SIDE LEFT: "%s"' % str(self.zijde_links))
             #self.get_logger().info('SIDE RIGHT: "%s"' % str(self.zijde_rechts))
@@ -160,8 +161,8 @@ class Move(Node):
         
 
 
-            maximum_afwijking = 0.0  # Maximum verschil tussen zijde links en rechts
-            motor_draai = 0.005
+            maximum_afwijking = 0  # Maximum verschil tussen zijde links en rechts
+            motor_draai = 0.018 # snelheid van draaien
 
             # als zijde links en rechts even groot zijn dan staat de robot parallel met de straat en rijdt hij recht vooruit
             if (self.diag_right - self.diag_left) > maximum_afwijking :
