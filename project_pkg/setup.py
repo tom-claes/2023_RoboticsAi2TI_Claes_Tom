@@ -23,7 +23,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'move = project_pkg.move:main'
+            'move = project_pkg.move:main',
+            'turn = project_pkg.turn:main'
         ],
     },
 )

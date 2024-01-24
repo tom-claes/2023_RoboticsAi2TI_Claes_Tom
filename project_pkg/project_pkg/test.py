@@ -31,11 +31,19 @@ class Turn(Node):
         # de variabelen waarin de min afstand (lidar data waarde) binnen een range van 10° (5 boven en 5 onder ) wordt opgeslagen
         self.laser_50 = 0
         self.laser_140 = 0
+        self.laser_220 = 0
+        self.laser_310 = 0
+        self.laser_left = 0
         self.laser_right = 0
 
         # create a Twist message
 
-        self.timer = self.create_timer(self.timer_period, self.turn)
+        self.direction_set = False
+        self.first = True
+        self.direction = "right"
+        self.laser_side = 0
+        self.laser_border1 = 0
+        self.laser_border2 = 0
 
         self.start_time = time.time()
 
@@ -58,10 +66,9 @@ class Turn(Node):
             # waarde (afstand) van lidar punt
             value = msg.ranges[i]
             # checkt of de waarde tussen 0 & oneindig is en kijkt ook of het niet nan is
-            if value is not None:
-                if 0 < value < float('inf') and not math.isnan(value):
-                    # als de waarde voldoet aan de criteria, voeg waarde toe aan verzameling punten
-                    indices.append(value)
+            if 0 < value < float('inf') and not math.isnan(value):
+                # als de waarde voldoet aan de criteria, voeg waarde toe aan verzameling punten
+                indices.append(value)
 
         # returned array van gevalideerde lidar punten tussen een begin- en eindpunt 
         return indices
@@ -73,7 +80,7 @@ class Turn(Node):
 
         # als er indices zijn, return het laagste punt
         if indices:
-            return min(indices)
+            return max(indices)
         else:
             return None
     
@@ -89,83 +96,12 @@ class Turn(Node):
 
     # Functie die de ranges instelt van de LiDar detector
     def laser_callback(self,msg): 
-        self.laser_right = self.min_lidar_value(msg, 85, 95)
-        # haalt de min afstand van 50° & 140° op
-        self.laser_50 = self.min_lidar_value(msg, 45, 55)
-        self.laser_140 = self.min_lidar_value(msg, 135, 145)
+            # haalt de min afstand van 50° & 140° op
+            self.laser_50 = self.min_lidar_value(msg, 85, 95)
+            self.laser_140 = self.min_lidar_value(msg, 135, 145)
+            self.get_logger().info('90: "%s"' % str(self.laser_50))
 
-    # Functie die robot draait
-    def move(self,msg, linear_velocity, angular_velocity, duration):
-        msg.linear.x = linear_velocity
-        msg.linear.y = 0.0
-        msg.angular.z = angular_velocity
 
-        start_time = time.time()
-
-        while time.time() - start_time < duration:
-            self.publisher_.publish(msg)
-            time.sleep(0.01)  # sleep for 10ms
-
-        # Stop the robot
-        msg.linear.x = 0.0
-        msg.angular.z = 0.0
-        self.publisher_.publish(msg)
-
-    def turn_90_degrees(self, msg, angular_velocity):
-        msg.linear.x = 0.0
-        msg.angular.z = angular_velocity
-
-        start_time = time.time()
-
-        while time.time() - start_time < 16.2:
-            self.publisher_.publish(msg)
-            time.sleep(0.01)  # sleep for 10ms
-
-        # Stop the robot
-        msg.linear.x = 0.0
-        msg.angular.z = 0.0
-        self.publisher_.publish(msg)
-        time.sleep(0.1)  # sleep for stopping
-
-    def move_forward(self, msg, linear_velocity):
-        msg.linear.x = linear_velocity
-        msg.angular.z = 0.0
-
-        start_time = time.time()
-
-        while time.time() - start_time < 11:
-            self.publisher_.publish(msg)
-            time.sleep(0.01)  # sleep for 10ms
-
-        # Stop the robot
-        msg.linear.x = 0.0
-        msg.angular.z = 0.0
-        self.publisher_.publish(msg)
-        time.sleep(0.1)  # sleep for stopping
-    
-    # Functie die bepaalt hoe de robot gaat bewegen
-    def turn(self):
-        msg = Twist()
-
-        # haalt data op van lidar scan (afstand) zodat code niet redundant is
-
-        msg.linear.x = 0.05 
-
-        self.get_logger().info(str(self.laser_right))
-
-        # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # 1 omdat als hij bij abnormaal gebruik zo ver mogelijk naar de achterste hoek v.e. parking plaats wijst dan is de afstan 0.8
-        if self.laser_right is not None and self.laser_right > 1 and abs(self.laser_50 - self.laser_140) < 0.012:
-                self.get_logger().info('Turning')
-                self.move(msg, 0.0, -0.1, 16.2)
-                self.get_logger().info('Forward')
-                self.move(msg, 0.05, 0.0, 11.0)
-                self.get_logger().info('Stop')
-                # zorgt dat if niet loopt
-                self.laser_right = 0
-        
-        self.publisher_.publish(msg)
-        
 
 def main(args=None):
     # initialize the ROS communication

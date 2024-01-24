@@ -87,35 +87,6 @@ class Move(Node):
         value = int(((360 - degrees) / 360) * total_ranges)
         return value
 
-# Functie die de ranges instelt van de LiDar detector
-#    def laser_callback(self,msg): 
-#        
-        # Save the frontal laser scan isourcnfo at 0° 
-#        self.laser_forward = msg.ranges[0] 
-#
-#        self.get_logger().info('Right: "%s"' % str(msg.ranges[self.degrees(msg, 45)]))
-#
-#        frontLeft_indices = [value for value in msg.ranges[self.degrees(msg, 1):self.degrees(msg, 40)] if 0 < value < float('inf') and not math.isnan(value)]
-#        frontRight_indices = [value for value in msg.ranges[self.degrees(msg, 320):self.degrees(msg, -1)] if 0 < value < float('inf') and not math.isnan(value)]
-        
-
-#        if frontLeft_indices and frontRight_indices:
-#            self.laser_frontLeft = min(frontLeft_indices)
-#            self.laser_frontRight = min(frontRight_indices)
-
-
-#        left_indices = [value for value in msg.ranges[self.degrees(msg, 255):self.degrees(msg, 285)] if 0 < value < float('inf') and not math.isnan(value)]
-#        right_indices = [value for value in msg.ranges[self.degrees(msg, 75):self.degrees(msg, 105)] if 0 < value < float('inf') and not math.isnan(value)]
-
-#        if left_indices and right_indices:
-#           self.laser_left = min(left_indices)
-#           self.laser_right = min(right_indices)
-           
-        
-        # Berekent de lange zijde tussen forward en links/rechts m.b.v. de stelling van pythagoras
-#        self.zijde_links = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_left, 2))
-#        self.zijde_rechts = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_right, 2))
-
 
     # Functie die de ranges instelt van de LiDar detector
     def laser_callback(self,msg): 
@@ -138,29 +109,7 @@ class Move(Node):
         #if self.start_time > 40:
             # create a Twist message
             msg = Twist()
-
-            # print de data
-            #self.get_logger().info('Total ranges: "%s"' % str(self.total_ranges))
-            
-            #self.get_logger().info('Forward: "%s"' % str(self.laser_forward))
-            
-            #self.get_logger().info('Left-Forward: "%s"' % str(self.laser_frontLeft))
-            #self.get_logger().info('Right-Forward: "%s"' % str(self.laser_frontRight))
-            
-        
-            #self.get_logger().info('LEFT: "%s"' % str(self.laser_left))
-            #self.get_logger().info('RIGHT: "%s"' % str(self.laser_right))
-
-            #self.get_logger().info('SIDE LEFT: "%s"' % str(self.zijde_links))
-            #self.get_logger().info('SIDE RIGHT: "%s"' % str(self.zijde_rechts))
-
-            #self.get_logger().info('')
-
-        # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        
-
-
+      
             maximum_afwijking = 0  # Maximum verschil tussen zijde links en rechts
             motor_draai = 0.018 # snelheid van draaien
 

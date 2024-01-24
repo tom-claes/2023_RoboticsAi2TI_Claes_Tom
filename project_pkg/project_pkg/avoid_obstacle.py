@@ -109,11 +109,15 @@ class Avoid_obstacle(Node):
             if self.laser_frontRight_barrier > self.laser_frontLeft_barrier:
                 if self.laser_front < self.laser_frontLeft_barrier:
                     # stop moving
+                     print('')
+
 
             # als rechts dichter bij de muur is gebruiken we de afstand tot de muur. Als er in de front range een obstakel bevindt dat zich dichter bevindt dan de muur dan stop de Turtlebot
             elif self.laser_frontRight_barrier < self.laser_frontLeft_barrier:
                 if self.laser_front < self.laser_frontRight_barrier:
                     # stop moving
+                     print('')
+
                
             self.publisher_.publish(msg)
         
