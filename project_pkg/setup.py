@@ -24,7 +24,6 @@ setup(
     entry_points={
         'console_scripts': [
             'move = project_pkg.move:main',
-            'turn = project_pkg.turn:main'
         ],
     },
 )

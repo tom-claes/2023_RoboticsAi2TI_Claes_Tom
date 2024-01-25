@@ -23,14 +23,8 @@ def generate_launch_description():
             package='project_pkg',
             executable='move',
             output='screen')
-    
-    turn_node =Node(
-            package='project_pkg',
-            executable='turn',
-            output='screen')
 
 
     ld.add_action(move_node)
-    ld.add_action(turn_node)
     
     return ld

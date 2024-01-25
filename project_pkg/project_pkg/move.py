@@ -197,29 +197,27 @@ class Move(Node):
     
     # Functie die bepaalt hoe de robot gaat bewegen
     def move(self):
-            # create a Twist message  
-            msg = Twist()
-        #if self.start_time > 40:    
-            maximum_afwijking = 0  # Maximum verschil tussen zijde links en rechts
-            motor_draai = 0.015 # snelheid van draaien
+        # maakt Twist() message 
+        msg = Twist()
+        
+        maximum_afwijking = 0  # Maximum verschil tussen zijde links en rechts
+        motor_draai = 0.015 # snelheid van draaien
 
-            # als zijde links en rechts even groot zijn dan staat de robot parallel met de straat en rijdt hij recht vooruit
-            if (self.diag_right - self.diag_left) > maximum_afwijking :
-                msg.linear.x = 0.05  # Forward linear velocity
-                msg.angular.z = -(motor_draai)  # Adjust angular velocity for a right turn
-
-            # If the left wall is too far, adjust to the left
-            elif (self.diag_left - self.diag_right) > maximum_afwijking :
-                msg.linear.x = 0.05  # Forward linear velocity
-                msg.angular.z = motor_draai  # Adjust angular velocity for a left turn
-
-            # If the distance is within the desired range, move forward
-            else:
-                msg.linear.x = 0.05  # Forward linear velocity
-                msg.angular.z = 0.0  # No angular velocity for straight motion
-       
-                    
-            self.publisher_.publish(msg)
+        # als zijde links en rechts even groot zijn dan staat de robot parallel met de straat en rijdt hij recht vooruit
+        if (self.diag_right - self.diag_left) > maximum_afwijking :
+            msg.linear.x = 0.05  # Forward linear velocity
+            msg.angular.z = -(motor_draai)  # Adjust angular velocity for a right turn
+        # If the left wall is too far, adjust to the left
+        elif (self.diag_left - self.diag_right) > maximum_afwijking :
+            msg.linear.x = 0.05  # Forward linear velocity
+            msg.angular.z = motor_draai  # Adjust angular velocity for a left turn
+        # If the distance is within the desired range, move forward
+        else:
+            msg.linear.x = 0.05  # Forward linear velocity
+            msg.angular.z = 0.0  # No angular velocity for straight motion
+    
+                
+        self.publisher_.publish(msg)
 
     # Functie kijkt of er een opstakel is
     def avoid(self):
@@ -233,7 +231,6 @@ class Move(Node):
 
 
 
-
     # Functie dient als main functie en roept andere functies aan
     def coördinator(self):
         # Kijkt of er opstakel is, zo ja voer self.stop() uit
@@ -241,13 +238,17 @@ class Move(Node):
             self.avoid()
 
         else:
-            # kijkt of er gedraaid moet worden, dat gebeurd als afstand rechts groter is dan 1 en de robot zich in het midden van het pad bevindt
-            if self.laser_right is not None and self.laser_right > 1 and abs(self.laser_50 - self.laser_140) < 0.012:
-                self.turning = True
-                self.turn()
-                self.turning = False
-            # als robot niet draait en niet stop staat, rijdt hij vooruit
-            elif self.turning == False:
+            # als het programma wordt opgestart rijdt de robot eerst 40 seconden vooruit voor hij kan afslagen
+            if (time.time() - self.start_time) > 40:
+                # kijkt of er gedraaid moet worden, dat gebeurd als afstand rechts groter is dan 1 en de robot zich in het midden van het pad bevindt
+                if self.laser_right is not None and self.laser_right > 1 and abs(self.laser_50 - self.laser_140) < 0.012:
+                    self.turning = True
+                    self.turn()
+                    self.turning = False
+                # als robot niet draait en niet stop staat, rijdt hij vooruit
+                elif self.turning == False:
+                    self.move()
+            else:
                 self.move()
 
 
