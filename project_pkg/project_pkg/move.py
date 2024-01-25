@@ -156,7 +156,7 @@ class Move(Node):
        self.laser_140 = self.min_lidar_value(msg, 135, 145)
 
        # haalt min afstand tussen -20° en 20° op
-       self.laser_frontWaring = self.min_lidar_value_2_ranges(msg, 0, 20, 340, 359)
+       self.laser_frontWaring = self.min_lidar_value_2_ranges(msg, 0, 40, 320, 359)
 
        # Berekent de lange zijde tussen forward en links/rechts m.b.v. de stelling van pythagoras
        self.diag_right = math.sqrt( pow(self.laser_forward, 2) + pow(self.laser_right, 2))
@@ -197,9 +197,9 @@ class Move(Node):
     
     # Functie die bepaalt hoe de robot gaat bewegen
     def move(self):
+            # create a Twist message  
             msg = Twist()
-        #if self.start_time > 40:
-            # create a Twist message      
+        #if self.start_time > 40:    
             maximum_afwijking = 0  # Maximum verschil tussen zijde links en rechts
             motor_draai = 0.015 # snelheid van draaien
 
@@ -224,13 +224,11 @@ class Move(Node):
     # Functie kijkt of er een opstakel is
     def avoid(self):
         # als de min afstand tussen -20° en 40° kleiner is dan de kleinste afstand tot de muur => return True
-        if self.laser_frontWaring < 0.4:
-            return True
-
-    # Functie stopt beweging voor 1 iteratie
-    def stop(self):
         msg = Twist()
-        self.motioning(msg, 0.0, 0.0, 0.025)
+        msg.linear.x = 0.0
+        msg.angular.z = 0.0
+        self.publisher_.publish(msg)
+
 
 
 
@@ -240,10 +238,7 @@ class Move(Node):
     def coördinator(self):
         # Kijkt of er opstakel is, zo ja voer self.stop() uit
         if self.laser_frontWaring < 0.4:
-            msg = Twist()
-            msg.linear.x = 0.0
-            msg.angular.z = 0.0
-            self.publisher_.publish(msg)
+            self.avoid()
 
         else:
             # kijkt of er gedraaid moet worden, dat gebeurd als afstand rechts groter is dan 1 en de robot zich in het midden van het pad bevindt
@@ -254,7 +249,6 @@ class Move(Node):
             # als robot niet draait en niet stop staat, rijdt hij vooruit
             elif self.turning == False:
                 self.move()
-
 
 
 
