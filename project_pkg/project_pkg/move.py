@@ -239,7 +239,7 @@ class Move(Node):
 
         else:
             # als het programma wordt opgestart rijdt de robot eerst 40 seconden vooruit voor hij kan afslagen
-            if (time.time() - self.start_time) > 50:
+            if (time.time() - self.start_time) > 40:
                 # kijkt of er gedraaid moet worden, dat gebeurd als afstand rechts groter is dan 1 en de robot zich in het midden van het pad bevindt
                 if self.laser_right is not None and self.laser_right > 1 and abs(self.laser_50 - self.laser_140) < 0.012:
                     self.turning = True
